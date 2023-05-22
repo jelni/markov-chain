@@ -8,7 +8,7 @@ taken into account when generating text. More means better generation results,
 but also requires more training input.
 
 It supports saving and loading the state to a MessagePack file (and any other
-format via [Serde](https://crates.io/crates/serde).
+format via [Serde](https://crates.io/crates/serde)).
 
 ## Example
 
@@ -25,6 +25,6 @@ fn main() {
 
     let chain = MarkovChain::load(BufReader::new(File::open("model.dat").unwrap())).unwrap();
 
-    println!("loaded {} entries", chain.len());
+    println!("loaded {} entries", chain.len()); // loaded 3 entries
 }
 ```
