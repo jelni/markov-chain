@@ -1,14 +1,14 @@
 # markov-chain
 
-A simple [Markov chain](https://wikipedia.org/wiki/Markov_chain) implementation
-in Rust. I made it to better understand this data structure.
+A simple [Markov chain](https://wikipedia.org/wiki/Markov_chain) Rust
+implementation I made to better understand this data structure.
 
 Any order (HashMap's key length) can be used. This decides how many words are
-taken into account when generating text. More means better generation results,
-but also requires more training input.
+taken into account when generating text. More will result in better generation
+results, but also requires more training input.
 
-It supports saving and loading the state to a MessagePack file (and any other
-format via [Serde](https://crates.io/crates/serde)).
+It supports saving and restoring the state with a MessagePack file (and any
+other format via [Serde](https://crates.io/crates/serde)).
 
 ## Example
 
