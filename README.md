@@ -1,6 +1,6 @@
 # markov-chain
 
-A simple (Markov chain)[https://wikipedia.org/wiki/Markov_chain] implementation
+A simple [Markov chain](https://wikipedia.org/wiki/Markov_chain) implementation
 in Rust. I made it to better understand this data structure.
 
 Any order (HashMap's key length) can be used. This decides how many words are
@@ -8,7 +8,7 @@ taken into account when generating text. More means better generation results,
 but also requires more training input.
 
 It supports saving and loading the state to a MessagePack file (and any other
-format via (Serde)[https://crates.io/crates/serde]).
+format via [Serde](https://crates.io/crates/serde).
 
 ## Example
 
