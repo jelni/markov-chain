@@ -91,7 +91,7 @@ impl MarkovChain {
         let mut rng = rand::thread_rng();
         let mut words = Vec::from(self.chain.keys().choose(&mut rng)?.clone());
 
-        for _ in 0..=max_len {
+        for _ in 0..max_len {
             let word = match self
                 .chain
                 .get(&words[words.len() - self.order..].iter().cloned().collect())
@@ -119,5 +119,40 @@ impl MarkovChain {
     #[must_use]
     pub fn is_empty(&self) -> bool {
         self.len() == 0
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+
+    #[test]
+    fn test_empty_chain() {
+        let chain = MarkovChain::new(1);
+
+        assert_eq!(chain.len(), 0);
+        assert!(chain.generate_text(16).is_none());
+    }
+
+    #[test]
+    fn test_chain() {
+        let mut chain = MarkovChain::new(2);
+
+        chain.train("lorem ipsum dolor sit amet");
+
+        assert_eq!(chain.len(), 3);
+        assert!(chain.generate_text(16).is_some());
+    }
+
+    #[test]
+    fn test_text_generation() {
+        let mut chain = MarkovChain::new(1);
+
+        chain.train("a a a a");
+
+        assert_eq!(chain.len(), 1);
+        assert_eq!(chain.generate_text(1).unwrap(), "a a");
+        assert_eq!(chain.generate_text(2).unwrap(), "a a a");
+        assert_eq!(chain.generate_text(3).unwrap(), "a a a a");
     }
 }
