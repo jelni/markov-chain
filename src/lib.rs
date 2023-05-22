@@ -17,8 +17,14 @@ pub struct MarkovChain {
 
 impl MarkovChain {
     /// Creates a new chain with the specified order.
+    ///
+    /// # Panics
+    ///
+    /// Panics if the `order` is 0.
     #[must_use]
     pub fn new(order: usize) -> Self {
+        assert_ne!(order, 0, "order cannot be 0");
+
         Self {
             order,
             chain: HashMap::new(),
