@@ -11,7 +11,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize)]
 pub struct MarkovChain {
     order: usize,
-    chain: HashMap<Vec<String>, Vec<(String, u32)>>,
+    chain: HashMap<Vec<String>, Vec<(String, u8)>>,
 }
 
 impl MarkovChain {
@@ -43,7 +43,18 @@ impl MarkovChain {
             let pair = (word.clone(), 1);
             match self.chain.get_mut(&Vec::from(previous_words.clone())) {
                 Some(pairs) => match pairs.iter_mut().find(|pair| pair.0 == word) {
-                    Some(pair) => pair.1 += 1,
+                    Some(pair) => {
+                        match pair.1.checked_add(1) {
+                            Some(weight) => pair.1 = weight,
+                            None => {
+                                // if increasing the weight would cause an overflow, half weights of
+                                // all options
+                                for pair in pairs.iter_mut() {
+                                    pair.1 = (pair.1 / 2).max(1);
+                                }
+                            }
+                        }
+                    }
                     None => {
                         pairs.push(pair);
                     }
@@ -70,7 +81,8 @@ impl MarkovChain {
         for _ in 0..max_len {
             let word = match self.chain.get(&words[words.len() - self.order..].to_vec()) {
                 Some(pairs) => {
-                    let dist = WeightedIndex::new(pairs.iter().map(|pair| pair.1)).unwrap();
+                    let dist =
+                        WeightedIndex::new(pairs.iter().map(|pair| u32::from(pair.1))).unwrap();
                     pairs[dist.sample(&mut rng)].0.clone()
                 }
                 None => break,
@@ -133,5 +145,20 @@ mod test {
         assert_eq!(chain.generate_text(1).unwrap(), "a a");
         assert_eq!(chain.generate_text(2).unwrap(), "a a a");
         assert_eq!(chain.generate_text(3).unwrap(), "a a a a");
+    }
+
+    #[test]
+    fn test_overflow_handling() {
+        let mut chain = MarkovChain {
+            order: 1,
+            chain: HashMap::from([(vec!["a".into()], vec![("a".into(), 255), ("b".into(), 128)])]),
+        };
+
+        chain.train(["a", "a"].map(Into::into).into_iter());
+
+        assert_eq!(
+            chain.chain,
+            HashMap::from([(vec!["a".into()], vec![("a".into(), 127), ("b".into(), 64)])])
+        );
     }
 }
