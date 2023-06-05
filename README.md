@@ -7,8 +7,8 @@ Any order (HashMap's key length) can be used. This decides how many words are
 taken into account when generating text. More will result in better generation
 results, but also requires more training input.
 
-It supports saving and restoring the state with a MessagePack file (and any
-other format via [Serde](https://crates.io/crates/serde)).
+It allows saving and restoring the state from any format that
+[Serde](https://crates.io/crates/serde)) supports.
 
 ## Example
 

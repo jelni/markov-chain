@@ -1,7 +1,6 @@
 #![warn(clippy::pedantic)]
 
 use std::collections::{HashMap, VecDeque};
-use std::io::{Read, Write};
 
 use rand::distributions::WeightedIndex;
 use rand::prelude::Distribution;
@@ -12,7 +11,7 @@ use serde::{Deserialize, Serialize};
 #[derive(Serialize, Deserialize)]
 pub struct MarkovChain {
     order: usize,
-    chain: HashMap<VecDeque<String>, Vec<(String, u32)>>,
+    chain: HashMap<Vec<String>, Vec<(String, u32)>>,
 }
 
 impl MarkovChain {
@@ -31,32 +30,9 @@ impl MarkovChain {
         }
     }
 
-    /// Writes the `MessagePack` serialized struct to the specified writer.
-    /// Use this method to store the model on disk.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if the serialization fails.
-    pub fn save(&self, writer: &mut impl Write) -> Result<(), rmp_serde::encode::Error> {
-        rmp_serde::encode::write(writer, &self)
-    }
-
-    /// Reads the `MessagePack` serialized struct from the specified reader.
-    /// Use this method to load the model from disk.
-    ///
-    /// # Errors
-    ///
-    /// This function will return an error if the deserialization fails.
-    pub fn load(reader: impl Read) -> Result<Self, rmp_serde::decode::Error> {
-        rmp_serde::decode::from_read(reader)
-    }
-
-    /// Learns new words and their relations. This function splits the input
-    /// using [`str::split_ascii_whitespace`]. The input should have at least
+    /// Learns new words and their relations. The input should have at least
     /// `order` words for this function to do anything.
-    pub fn train(&mut self, input: &str) {
-        let mut input = input.split_ascii_whitespace();
-
+    pub fn train(&mut self, mut input: impl Iterator<Item = String>) {
         let mut previous_words = input
             .by_ref()
             .take(self.order)
@@ -64,8 +40,8 @@ impl MarkovChain {
             .collect::<VecDeque<_>>();
 
         for word in input {
-            let pair = (word.to_owned(), 1);
-            match self.chain.get_mut(&previous_words) {
+            let pair = (word.clone(), 1);
+            match self.chain.get_mut(&Vec::from(previous_words.clone())) {
                 Some(pairs) => match pairs.iter_mut().find(|pair| pair.0 == word) {
                     Some(pair) => pair.1 += 1,
                     None => {
@@ -73,12 +49,12 @@ impl MarkovChain {
                     }
                 },
                 None => {
-                    self.chain.insert(previous_words.clone(), vec![pair]);
+                    self.chain.insert(previous_words.clone().into(), vec![pair]);
                 }
             }
 
             previous_words.pop_front();
-            previous_words.push_back(word.into());
+            previous_words.push_back(word);
         }
     }
 
@@ -89,13 +65,10 @@ impl MarkovChain {
     #[must_use]
     pub fn generate_text(&self, max_len: u32) -> Option<String> {
         let mut rng = rand::thread_rng();
-        let mut words = Vec::from(self.chain.keys().choose(&mut rng)?.clone());
+        let mut words = self.chain.keys().choose(&mut rng)?.clone();
 
         for _ in 0..max_len {
-            let word = match self
-                .chain
-                .get(&words[words.len() - self.order..].iter().cloned().collect())
-            {
+            let word = match self.chain.get(&words[words.len() - self.order..].to_vec()) {
                 Some(pairs) => {
                     let dist = WeightedIndex::new(pairs.iter().map(|pair| pair.1)).unwrap();
                     pairs[dist.sample(&mut rng)].0.clone()
@@ -138,17 +111,23 @@ mod test {
     fn test_chain() {
         let mut chain = MarkovChain::new(2);
 
-        chain.train("lorem ipsum dolor sit amet");
+        chain.train(
+            "lorem ipsum dolor sit amet"
+                .split_ascii_whitespace()
+                .map(Into::into),
+        );
 
         assert_eq!(chain.len(), 3);
-        assert!(chain.generate_text(16).is_some());
+        assert!(chain
+            .generate_text(16)
+            .is_some_and(|text| text.ends_with("dolor sit amet")));
     }
 
     #[test]
     fn test_text_generation() {
         let mut chain = MarkovChain::new(1);
 
-        chain.train("a a a a");
+        chain.train("a a a a".split_ascii_whitespace().map(Into::into));
 
         assert_eq!(chain.len(), 1);
         assert_eq!(chain.generate_text(1).unwrap(), "a a");
